@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
 
-const PORT = 3010;
+const PORT = process.env.PORT || 3010;
 let utilisateursConnectés = {};
 
 // ✅ Middleware de log
@@ -93,5 +93,5 @@ io.on('connection', (socket) => {
 
 // ✅ Démarrage du serveur
 server.listen(PORT, () => {
-  console.log(`✅ Serveur lancé sur http://localhost:${PORT}`);
+  console.log(`✅ Serveur prêt sur le port ${PORT}`);
 });
