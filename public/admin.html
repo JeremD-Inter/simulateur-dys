@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Contrôle Administrateur</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #f4f4f4;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    #users {
+      list-style: none;
+      padding: 0;
+    }
+    .user {
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    button {
+      padding: 0.3rem 0.8rem;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .active {
+      background-color: #27ae60;
+      color: white;
+    }
+    .inactive {
+      background-color: #c0392b;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Panneau de contrôle</h1>
+  <ul id="users"></ul>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const pseudo = params.get("pseudo") || "Jerem"; // 👤 Nom visible
+    const isAdmin = params.get("admin") === "true";
+
+    const ws = new WebSocket('ws://localhost:3000');
+    const usersList = document.getElementById('users');
+
+    ws.onopen = () => {
+      if (isAdmin) {
+        ws.send(JSON.stringify({ type: 'admin_register', name: pseudo }));
+      } else {
+        // fail-safe
+        ws.send(JSON.stringify({ type: 'register', name: pseudo }));
+      }
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'user_list') {
+        usersList.innerHTML = '';
+        data.users.forEach(user => {
+          const li = document.createElement('li');
+          li.className = 'user';
+
+          const name = document.createElement('span');
+          name.textContent = user;
+
+          const button = document.createElement('button');
+          button.textContent = 'Activer';
+          button.className = 'inactive';
+
+          button.addEventListener('click', () => {
+            const isActive = button.classList.contains('active');
+            ws.send(JSON.stringify({
+              type: 'control',
+              target: user,
+              effect: isActive ? 'STOP_EFFETS' : 'ACTIVER_EFFETS'
+            }));
+            button.textContent = isActive ? 'Activer' : 'Désactiver';
+            button.className = isActive ? 'inactive' : 'active';
+          });
+
+          li.appendChild(name);
+          li.appendChild(button);
+          usersList.appendChild(li);
+        });
+      }
+    };
+  </script>
+</body>
+</html>

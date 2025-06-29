@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simulateur DYS</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- ✅ Layout principal -->
+  <div id="main-layout" style="display: flex;">
+
+    <!-- ✅ Barre latérale participants -->
+    <aside id="utilisateurs-connectes" style="width: 200px; background-color: #f5f5f5; padding: 1rem; border-right: 1px solid #ccc;">
+      <h2 style="font-weight: bold;">Participants</h2>
+      <ul id="liste-utilisateurs" style="list-style: none; padding: 0;"></ul>
+    </aside>
+
+    <!-- ✅ Contenu principal -->
+    <div id="container" style="flex: 1; padding: 2rem;">
+      <!-- ✅ Titre principal -->
+      <header style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 1.8em; font-weight: bold;">
+          Diversité & Inclusion
+        </h1>
+        <p style="font-size: 1.1em; font-weight: normal; max-width: 800px; margin: auto;">
+          Favoriser l’évolution des comportements dans l’enseignement supérieur et le monde professionnel
+        </p>
+      </header>
+
+      <!-- ✅ Fenêtre de lecture -->
+      <div id="fenetre-lecture">
+        <div id="contenu-wrapper">
+          <div id="contenu">
+            <!-- Le contenu des étapes est injecté ici -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ✅ Boutons de navigation texte -->
+      <div id="boutons-scroll-texte" style="margin-top: 1rem;">
+        <button id="precedent">⬅ Revenir en arrière</button>
+        <button id="suivant">Lire la suite ➡</button>
+      </div>
+
+      <!-- ✅ Boutons de navigation étapes -->
+      <div id="boutons-etapes" style="margin-top: 1rem;">
+        <button id="etape-precedente">← Étape précédente</button>
+        <button id="etape-suivante">Étape suivante →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Socket.io & logique utilisateur -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const pseudo = sessionStorage.getItem("pseudo");
+      const estAdmin = sessionStorage.getItem("isAdmin") === "true";
+
+      if (!pseudo) {
+        sessionStorage.clear();
+        window.location.href = "/login";
+        return;
+      }
+
+      const socket = io();
+      socket.emit('nouvel_utilisateur', { nom: pseudo, estAdmin });
+
+      socket.on('mise_a_jour_utilisateurs', (liste) => {
+        const ul = document.getElementById("liste-utilisateurs");
+        if (!ul) return;
+        ul.innerHTML = "";
+
+        liste.forEach(u => {
+          const li = document.createElement("li");
+          li.textContent = u.nom;
+
+          if (estAdmin && u.nom !== pseudo) {
+            const btn = document.createElement("button");
+            btn.textContent = u.effetsActifs ? "Stop" : "Activer";
+            btn.style.marginLeft = "10px";
+            btn.style.fontSize = "0.8rem";
+            btn.onclick = () => {
+              socket.emit('admin_toggle_effets', { cible: u.nom });
+            };
+            li.appendChild(btn);
+          }
+
+          ul.appendChild(li);
+        });
+      });
+
+      socket.on('toggle_effets', (etat) => {
+        window.effetsActifs = etat;
+        const evt = new Event("effetsActifsChange");
+        window.dispatchEvent(evt);
+
+        if (!etat) {
+          const contenu = document.getElementById("contenu");
+          if (contenu) {
+            contenu.className = '';
+            contenu.style.filter = '';
+            contenu.style.transform = 'scale(1)';
+          }
+        }
+      });
+    });
+
+    // ✅ Nettoyage de sessionStorage à la fermeture
+    window.addEventListener("beforeunload", () => {
+      sessionStorage.clear();
+    });
+  </script>
+
+  <!-- ✅ Script des effets -->
+  <script src="/script.js"></script>
+</body>
+</html>
